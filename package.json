@@ -1,0 +1,24 @@
+{
+  "name": "task-manager",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Production-ready Task Management System",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "keywords": [
+    "task-manager",
+    "monorepo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
