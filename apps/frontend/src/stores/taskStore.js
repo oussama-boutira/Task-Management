@@ -23,7 +23,7 @@ export const useTaskStore = create((set, get) => ({
     try {
       const newTask = await taskApi.create(taskData);
       set((state) => ({
-        tasks: [...state.tasks, newTask],
+        tasks: [newTask, ...state.tasks],
         isLoading: false,
       }));
       return newTask;

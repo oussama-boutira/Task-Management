@@ -8,28 +8,51 @@
   box-sizing: border-box;
 }
 
+/* Light mode */
 body {
   font-family:
     "Inter",
     system-ui,
     -apple-system,
     sans-serif;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
+  color: #1e293b;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+/* Dark mode */
+.dark body,
+body.dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #f8fafc;
 }
 
-/* Custom scrollbar */
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-light-bg: rgba(0, 0, 0, 0.03);
+}
+
+.dark {
+  --glass-bg: rgba(30, 41, 59, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-light-bg: rgba(255, 255, 255, 0.05);
+}
+
+/* Custom scrollbar - Light mode */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #e2e8f0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #94a3b8;
   border-radius: 4px;
 }
 
@@ -37,17 +60,99 @@ body {
   background: #64748b;
 }
 
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Glassmorphism utilities */
 @layer utilities {
   .glass {
-    background: rgba(30, 41, 59, 0.8);
+    background: var(--glass-bg);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
   }
 
   .glass-light {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--glass-light-bg);
     backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
   }
+}
+
+/* Input focus styles for light mode */
+.light input:focus,
+.light textarea:focus,
+.light select:focus {
+  --tw-ring-color: #0ea5e9;
+}
+
+/* Light mode overrides */
+.light .bg-slate-800\/50 {
+  background-color: rgba(241, 245, 249, 0.8);
+}
+
+.light .bg-slate-800\/60 {
+  background-color: rgba(241, 245, 249, 0.9);
+}
+
+.light .border-slate-700 {
+  border-color: #e2e8f0;
+}
+
+.light .border-slate-700\/50 {
+  border-color: rgba(226, 232, 240, 0.8);
+}
+
+.light .border-slate-600 {
+  border-color: #cbd5e1;
+}
+
+.light .border-slate-800 {
+  border-color: #e2e8f0;
+}
+
+.light .bg-slate-900\/80 {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.light .bg-slate-700 {
+  background-color: #e2e8f0;
+}
+
+.light .hover\:bg-slate-700\/50:hover {
+  background-color: rgba(226, 232, 240, 0.8);
+}
+
+.light .hover\:bg-slate-600:hover {
+  background-color: #cbd5e1;
+}
+
+.light .text-white {
+  color: #1e293b;
+}
+
+.light .text-gray-300 {
+  color: #475569;
+}
+
+.light .text-gray-400 {
+  color: #64748b;
+}
+
+.light .text-gray-500 {
+  color: #94a3b8;
+}
+
+.light .placeholder-gray-400::placeholder,
+.light .placeholder-gray-500::placeholder {
+  color: #94a3b8;
 }

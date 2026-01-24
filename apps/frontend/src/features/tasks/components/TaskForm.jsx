@@ -5,6 +5,7 @@ import { createTaskSchema } from "../../../schemas/task.schema.js";
 export function TaskForm({ onSuccess }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -18,6 +19,7 @@ export function TaskForm({ onSuccess }) {
     const result = createTaskSchema.safeParse({
       title,
       description: description || undefined,
+      deadline: deadline ? new Date(deadline).toISOString() : undefined,
     });
     if (!result.success) {
       const fieldErrors = {};
@@ -33,6 +35,7 @@ export function TaskForm({ onSuccess }) {
       await createTask(result.data);
       setTitle("");
       setDescription("");
+      setDeadline("");
       onSuccess?.();
     } catch (error) {
       setErrors({ form: error.message });
@@ -95,6 +98,27 @@ export function TaskForm({ onSuccess }) {
         />
         <p className="mt-1 text-xs text-gray-500">
           {description.length}/2000 characters
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor="deadline"
+          className="block text-sm font-medium text-gray-300 mb-2"
+        >
+          Due Date / End Time
+        </label>
+        <div className="relative">
+          <input
+            type="datetime-local"
+            id="deadline"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all [color-scheme:dark]"
+          />
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          Set a deadline to get notified when the task is overdue
         </p>
       </div>
 

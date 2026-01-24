@@ -1,6 +1,49 @@
+import { useEffect, useRef } from "react";
 import { TaskCard } from "./TaskCard.jsx";
 
 export function TaskList({ tasks, isLoading, error, onDeleteTask }) {
+  const notifiedTasksRef = useRef(new Set());
+
+  // Request notification permission
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Check for deadlines
+  useEffect(() => {
+    const checkDeadlines = () => {
+      const now = new Date();
+      tasks.forEach((task) => {
+        if (
+          task.status !== "completed" &&
+          task.deadline &&
+          new Date(task.deadline) <= now
+        ) {
+          // Check if we already notified for this task to avoid spam
+          if (!notifiedTasksRef.current.has(task.id)) {
+            if (Notification.permission === "granted") {
+              new Notification("Task Overdue!", {
+                body: `The deadline for "${task.title}" has been reached.`,
+                icon: "/vite.svg", // Optional icon
+              });
+            }
+            notifiedTasksRef.current.add(task.id);
+          }
+        }
+      });
+    };
+
+    // Check every minute
+    const intervalId = setInterval(checkDeadlines, 60000);
+
+    // Initial check
+    checkDeadlines();
+
+    return () => clearInterval(intervalId);
+  }, [tasks]);
+
   if (isLoading && tasks.length === 0) {
     return (
       <div className="glass rounded-xl p-8">

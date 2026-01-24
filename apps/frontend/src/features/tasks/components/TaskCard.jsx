@@ -49,14 +49,68 @@ export function TaskCard({ task, onDelete }) {
               {task.description}
             </p>
           )}
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${status.color}`}
             >
               {status.icon} {status.label}
             </span>
+            {task.deadline &&
+              (() => {
+                const now = new Date();
+                const deadline = new Date(task.deadline);
+                const daysRemaining = Math.ceil(
+                  (deadline - now) / (1000 * 60 * 60 * 24),
+                );
+
+                let colorClass = "";
+                if (task.status === "completed") {
+                  colorClass =
+                    "bg-slate-700/50 text-gray-400 border border-slate-600/50";
+                } else if (daysRemaining <= 0) {
+                  colorClass =
+                    "bg-red-500/20 text-red-300 border border-red-500/30"; // Overdue
+                } else if (daysRemaining <= 3) {
+                  colorClass =
+                    "bg-red-500/20 text-red-300 border border-red-500/30"; // Critical
+                } else if (daysRemaining <= 7) {
+                  colorClass =
+                    "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"; // Warning
+                } else if (daysRemaining <= 15) {
+                  colorClass =
+                    "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"; // Caution
+                } else {
+                  colorClass =
+                    "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"; // Safe
+                }
+
+                return (
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${colorClass}`}
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    {deadline.toLocaleDateString()} •{" "}
+                    {deadline.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                );
+              })()}
             <span className="text-xs text-gray-500">
-              {new Date(task.createdAt).toLocaleDateString()}
+              Created: {new Date(task.createdAt).toLocaleDateString()}
             </span>
           </div>
         </div>

@@ -18,6 +18,7 @@ export const createTaskSchema = z.object({
     .max(2000, "Description must be 2000 characters or less")
     .optional(),
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
+  deadline: z.string().datetime().optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -31,6 +32,7 @@ export const updateTaskSchema = z.object({
     .max(2000, "Description must be 2000 characters or less")
     .optional(),
   status: z.enum(["pending", "in_progress", "completed"]).optional(),
+  deadline: z.string().datetime().optional().nullable(),
 });
 
 // Constants
