@@ -55,4 +55,48 @@ export const taskController = {
       next(error);
     }
   },
+
+  // POST /tasks/:id/start - Start task (user)
+  async startTask(req, res, next) {
+    try {
+      const { id } = req.validatedParams;
+      const task = await taskService.startTask(id, req.user);
+      return ApiResponse.success(res, task);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // POST /tasks/:id/complete - Complete task (user)
+  async completeTask(req, res, next) {
+    try {
+      const { id } = req.validatedParams;
+      const task = await taskService.completeTask(id, req.user);
+      return ApiResponse.success(res, task);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // POST /tasks/:id/approve - Approve task (admin)
+  async approveTask(req, res, next) {
+    try {
+      const { id } = req.validatedParams;
+      const task = await taskService.approveTask(id);
+      return ApiResponse.success(res, task);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // POST /tasks/:id/reject - Reject task (admin)
+  async rejectTask(req, res, next) {
+    try {
+      const { id } = req.validatedParams;
+      const task = await taskService.rejectTask(id);
+      return ApiResponse.success(res, task);
+    } catch (error) {
+      next(error);
+    }
+  },
 };

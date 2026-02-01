@@ -6,6 +6,7 @@ export const taskRepository = {
   async findAll() {
     const result = await query(
       `SELECT t.id, t.title, t.description, t.status, t.deadline, t.user_id AS "userId",
+              t.started_at AS "startedAt", t.completed_at AS "completedAt", t.time_spent AS "timeSpent",
               t.created_at AS "createdAt", t.updated_at AS "updatedAt",
               u.name AS "assignedUserName", u.email AS "assignedUserEmail"
        FROM tasks t
@@ -19,6 +20,7 @@ export const taskRepository = {
   async findByUserId(userId) {
     const result = await query(
       `SELECT t.id, t.title, t.description, t.status, t.deadline, t.user_id AS "userId",
+              t.started_at AS "startedAt", t.completed_at AS "completedAt", t.time_spent AS "timeSpent",
               t.created_at AS "createdAt", t.updated_at AS "updatedAt",
               u.name AS "assignedUserName", u.email AS "assignedUserEmail"
        FROM tasks t
@@ -34,6 +36,7 @@ export const taskRepository = {
   async findById(id) {
     const result = await query(
       `SELECT t.id, t.title, t.description, t.status, t.deadline, t.user_id AS "userId",
+              t.started_at AS "startedAt", t.completed_at AS "completedAt", t.time_spent AS "timeSpent",
               t.created_at AS "createdAt", t.updated_at AS "updatedAt",
               u.name AS "assignedUserName", u.email AS "assignedUserEmail"
        FROM tasks t
@@ -50,6 +53,7 @@ export const taskRepository = {
       `INSERT INTO tasks (title, description, status, deadline, user_id) 
        VALUES ($1, $2, $3, $4, $5) 
        RETURNING id, title, description, status, deadline, user_id AS "userId", 
+                 started_at AS "startedAt", completed_at AS "completedAt", time_spent AS "timeSpent",
                  created_at AS "createdAt", updated_at AS "updatedAt"`,
       [
         data.title,
@@ -88,6 +92,18 @@ export const taskRepository = {
       fields.push(`user_id = $${paramCount++}`);
       values.push(data.userId);
     }
+    if (data.startedAt !== undefined) {
+      fields.push(`started_at = $${paramCount++}`);
+      values.push(data.startedAt);
+    }
+    if (data.completedAt !== undefined) {
+      fields.push(`completed_at = $${paramCount++}`);
+      values.push(data.completedAt);
+    }
+    if (data.timeSpent !== undefined) {
+      fields.push(`time_spent = $${paramCount++}`);
+      values.push(data.timeSpent);
+    }
 
     fields.push(`updated_at = NOW()`);
     values.push(id);
@@ -95,8 +111,65 @@ export const taskRepository = {
     const result = await query(
       `UPDATE tasks SET ${fields.join(", ")} WHERE id = $${paramCount}
        RETURNING id, title, description, status, deadline, user_id AS "userId", 
+                 started_at AS "startedAt", completed_at AS "completedAt", time_spent AS "timeSpent",
                  created_at AS "createdAt", updated_at AS "updatedAt"`,
       values,
+    );
+    return result.rows[0] || null;
+  },
+
+  // Start task - set started_at and change status to in_progress
+  async startTask(id) {
+    const result = await query(
+      `UPDATE tasks SET started_at = NOW(), status = 'in_progress', updated_at = NOW() 
+       WHERE id = $1
+       RETURNING id, title, description, status, deadline, user_id AS "userId", 
+                 started_at AS "startedAt", completed_at AS "completedAt", time_spent AS "timeSpent",
+                 created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [id],
+    );
+    return result.rows[0] || null;
+  },
+
+  // Complete task - set completed_at, calculate time_spent, change status to pending_review
+  async completeTask(id) {
+    const result = await query(
+      `UPDATE tasks SET 
+         completed_at = NOW(), 
+         time_spent = EXTRACT(EPOCH FROM (NOW() - started_at)) / 60,
+         status = 'pending_review',
+         updated_at = NOW() 
+       WHERE id = $1
+       RETURNING id, title, description, status, deadline, user_id AS "userId", 
+                 started_at AS "startedAt", completed_at AS "completedAt", time_spent AS "timeSpent",
+                 created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [id],
+    );
+    return result.rows[0] || null;
+  },
+
+  // Approve task - change status to completed
+  async approveTask(id) {
+    const result = await query(
+      `UPDATE tasks SET status = 'completed', updated_at = NOW() 
+       WHERE id = $1
+       RETURNING id, title, description, status, deadline, user_id AS "userId", 
+                 started_at AS "startedAt", completed_at AS "completedAt", time_spent AS "timeSpent",
+                 created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [id],
+    );
+    return result.rows[0] || null;
+  },
+
+  // Reject task - change status back to in_progress, clear completed_at
+  async rejectTask(id) {
+    const result = await query(
+      `UPDATE tasks SET status = 'in_progress', completed_at = NULL, time_spent = NULL, updated_at = NOW() 
+       WHERE id = $1
+       RETURNING id, title, description, status, deadline, user_id AS "userId", 
+                 started_at AS "startedAt", completed_at AS "completedAt", time_spent AS "timeSpent",
+                 created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [id],
     );
     return result.rows[0] || null;
   },

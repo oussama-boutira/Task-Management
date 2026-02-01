@@ -79,4 +79,20 @@ export const userRepository = {
     );
     return result.rows[0] || null;
   },
+
+  // Delete user
+  async delete(id) {
+    const result = await query(`DELETE FROM users WHERE id = $1 RETURNING id`, [
+      id,
+    ]);
+    return result.rows[0] || null;
+  },
+
+  // Count admins (to prevent deleting last admin)
+  async countAdmins() {
+    const result = await query(
+      `SELECT COUNT(*) as count FROM users WHERE role = 'admin'`,
+    );
+    return parseInt(result.rows[0].count, 10);
+  },
 };

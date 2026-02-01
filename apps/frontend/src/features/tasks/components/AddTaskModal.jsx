@@ -90,7 +90,7 @@ export function AddTaskModal({ isOpen, onClose }) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg animate-slide-up">
+      <div className="relative w-full max-w-lg animate-slide-up max-h-[90vh] overflow-y-auto">
         <div className="glass rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-gradient-to-r from-primary-600/20 to-primary-500/10">

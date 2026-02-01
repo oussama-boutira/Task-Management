@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { useTaskStore } from "../../../stores/taskStore.js";
+import { useAuthStore } from "../../../stores/authStore.js";
 import { TaskStatus } from "../../../schemas/task.schema.js";
+import { taskApi } from "../../../lib/api.js";
 
 const columns = [
   {
@@ -17,6 +20,13 @@ const columns = [
     headerBg: "bg-blue-500/10",
   },
   {
+    id: TaskStatus.PENDING_REVIEW,
+    title: "👀 Pending Review",
+    color: "from-purple-500/20 to-violet-500/20",
+    borderColor: "border-purple-500/30",
+    headerBg: "bg-purple-500/10",
+  },
+  {
     id: TaskStatus.COMPLETED,
     title: "✅ Completed",
     color: "from-emerald-500/20 to-green-500/20",
@@ -25,11 +35,89 @@ const columns = [
   },
 ];
 
+// Format time spent for display
+function formatTimeSpent(minutes) {
+  if (!minutes) return null;
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+  if (hours > 0) {
+    return `${hours}h ${mins}m`;
+  }
+  return `${mins}m`;
+}
+
 function KanbanCard({ task, onDelete, isAdmin }) {
+  const [actionLoading, setActionLoading] = useState(null);
+  const { fetchTasks } = useTaskStore();
+  const { user } = useAuthStore();
+
   const handleDragStart = (e) => {
     e.dataTransfer.setData("taskId", task.id);
     e.dataTransfer.setData("currentStatus", task.status);
   };
+
+  const timeSpent = formatTimeSpent(task.timeSpent);
+  const isAssignedToMe = task.userId === user?.id;
+
+  // Action handlers
+  const handleStartTask = async (e) => {
+    e.stopPropagation();
+    setActionLoading("start");
+    try {
+      await taskApi.startTask(task.id);
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to start task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCompleteTask = async (e) => {
+    e.stopPropagation();
+    setActionLoading("complete");
+    try {
+      await taskApi.completeTask(task.id);
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to complete task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveTask = async (e) => {
+    e.stopPropagation();
+    setActionLoading("approve");
+    try {
+      await taskApi.approveTask(task.id);
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to approve task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectTask = async (e) => {
+    e.stopPropagation();
+    setActionLoading("reject");
+    try {
+      await taskApi.rejectTask(task.id);
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to reject task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Determine which buttons to show
+  const canStart =
+    (isAssignedToMe || isAdmin) && task.status === TaskStatus.PENDING;
+  const canComplete =
+    (isAssignedToMe || isAdmin) && task.status === TaskStatus.IN_PROGRESS;
+  const canApproveReject = isAdmin && task.status === TaskStatus.PENDING_REVIEW;
 
   return (
     <div
@@ -81,6 +169,13 @@ function KanbanCard({ task, onDelete, isAdmin }) {
       )}
 
       <div className="mt-3 flex flex-col gap-2">
+        {/* Time Spent Badge */}
+        {timeSpent && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 w-fit">
+            ⏱️ {timeSpent}
+          </span>
+        )}
+
         {task.deadline &&
           (() => {
             const now = new Date();
@@ -139,6 +234,48 @@ function KanbanCard({ task, onDelete, isAdmin }) {
           {new Date(task.createdAt).toLocaleDateString()}
         </span>
       </div>
+
+      {/* Action Buttons */}
+      {(canStart || canComplete || canApproveReject) && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {canStart && (
+            <button
+              onClick={handleStartTask}
+              disabled={actionLoading === "start"}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-[11px] font-medium rounded-lg border border-blue-500/30 transition-all disabled:opacity-50"
+            >
+              {actionLoading === "start" ? "..." : "▶️"} Start
+            </button>
+          )}
+          {canComplete && (
+            <button
+              onClick={handleCompleteTask}
+              disabled={actionLoading === "complete"}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[11px] font-medium rounded-lg border border-purple-500/30 transition-all disabled:opacity-50"
+            >
+              {actionLoading === "complete" ? "..." : "📝"} Submit
+            </button>
+          )}
+          {canApproveReject && (
+            <>
+              <button
+                onClick={handleApproveTask}
+                disabled={actionLoading === "approve"}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[11px] font-medium rounded-lg border border-emerald-500/30 transition-all disabled:opacity-50"
+              >
+                {actionLoading === "approve" ? "..." : "✅"} Approve
+              </button>
+              <button
+                onClick={handleRejectTask}
+                disabled={actionLoading === "reject"}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 text-[11px] font-medium rounded-lg border border-red-500/30 transition-all disabled:opacity-50"
+              >
+                {actionLoading === "reject" ? "..." : "🔄"} Reject
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -224,7 +361,7 @@ export function KanbanBoard({ tasks, onDeleteTask, isAdmin = false }) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {columns.map((column) => (
         <KanbanColumn
           key={column.id}

@@ -60,4 +60,74 @@ export const taskService = {
     await taskRepository.delete(id);
     return { id, message: "Task deleted successfully" };
   },
+
+  // Start task - user can start their assigned pending tasks
+  async startTask(id, user) {
+    const task = await taskRepository.findById(id);
+    if (!task) {
+      throw ApiError.notFound(`Task with id '${id}' not found`);
+    }
+
+    // Verify user is assigned to this task (or is admin)
+    if (user.role !== "admin" && task.userId !== user.id) {
+      throw ApiError.forbidden("You can only start tasks assigned to you");
+    }
+
+    // Verify task is pending
+    if (task.status !== "pending") {
+      throw ApiError.badRequest("Only pending tasks can be started");
+    }
+
+    return await taskRepository.startTask(id);
+  },
+
+  // Complete task - user marks their in-progress task as complete (sends to review)
+  async completeTask(id, user) {
+    const task = await taskRepository.findById(id);
+    if (!task) {
+      throw ApiError.notFound(`Task with id '${id}' not found`);
+    }
+
+    // Verify user is assigned to this task (or is admin)
+    if (user.role !== "admin" && task.userId !== user.id) {
+      throw ApiError.forbidden("You can only complete tasks assigned to you");
+    }
+
+    // Verify task is in progress
+    if (task.status !== "in_progress") {
+      throw ApiError.badRequest("Only in-progress tasks can be completed");
+    }
+
+    return await taskRepository.completeTask(id);
+  },
+
+  // Approve task - admin approves a task pending review
+  async approveTask(id) {
+    const task = await taskRepository.findById(id);
+    if (!task) {
+      throw ApiError.notFound(`Task with id '${id}' not found`);
+    }
+
+    // Verify task is pending review
+    if (task.status !== "pending_review") {
+      throw ApiError.badRequest("Only tasks pending review can be approved");
+    }
+
+    return await taskRepository.approveTask(id);
+  },
+
+  // Reject task - admin rejects a task pending review (sends back to in_progress)
+  async rejectTask(id) {
+    const task = await taskRepository.findById(id);
+    if (!task) {
+      throw ApiError.notFound(`Task with id '${id}' not found`);
+    }
+
+    // Verify task is pending review
+    if (task.status !== "pending_review") {
+      throw ApiError.badRequest("Only tasks pending review can be rejected");
+    }
+
+    return await taskRepository.rejectTask(id);
+  },
 };

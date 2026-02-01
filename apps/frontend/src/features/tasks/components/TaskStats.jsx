@@ -20,22 +20,25 @@ import { TaskStatus } from "../../../schemas/task.schema.js";
 const COLORS = {
   [TaskStatus.PENDING]: "#f59e0b",
   [TaskStatus.IN_PROGRESS]: "#3b82f6",
+  [TaskStatus.PENDING_REVIEW]: "#a855f7",
   [TaskStatus.COMPLETED]: "#10b981",
 };
 
 const STATUS_LABELS = {
   [TaskStatus.PENDING]: "Pending",
   [TaskStatus.IN_PROGRESS]: "In Progress",
+  [TaskStatus.PENDING_REVIEW]: "Pending Review",
   [TaskStatus.COMPLETED]: "Completed",
 };
 
 const STATUS_ICONS = {
   [TaskStatus.PENDING]: "⏳",
   [TaskStatus.IN_PROGRESS]: "🔄",
+  [TaskStatus.PENDING_REVIEW]: "👀",
   [TaskStatus.COMPLETED]: "✅",
 };
 
-export function TaskStats({ tasks }) {
+export function TaskStats({ tasks, isAdmin = false }) {
   // Calculate all statistics
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -130,6 +133,55 @@ export function TaskStats({ tasks }) {
       };
     });
   }, [tasks]);
+
+  // Gantt chart data (for admin only)
+  const ganttData = useMemo(() => {
+    if (!isAdmin) return [];
+
+    // Get tasks with deadlines for the Gantt chart
+    const tasksWithTimeline = tasks
+      .filter((t) => t.deadline || t.createdAt)
+      .map((t) => {
+        const startDate = new Date(t.createdAt);
+        const endDate = t.deadline
+          ? new Date(t.deadline)
+          : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Default 7 days if no deadline
+
+        return {
+          id: t.id,
+          title:
+            t.title.length > 30 ? t.title.substring(0, 30) + "..." : t.title,
+          fullTitle: t.title,
+          start: startDate,
+          end: endDate,
+          status: t.status,
+          assignee: t.assignedUserName || "Unassigned",
+          duration: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)),
+        };
+      })
+      .sort((a, b) => a.start - b.start)
+      .slice(0, 10); // Limit to 10 tasks for readability
+
+    return tasksWithTimeline;
+  }, [tasks, isAdmin]);
+
+  // Calculate Gantt chart timeline bounds
+  const ganttBounds = useMemo(() => {
+    if (ganttData.length === 0)
+      return { minDate: new Date(), maxDate: new Date(), totalDays: 30 };
+
+    const dates = ganttData.flatMap((t) => [t.start, t.end]);
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+
+    // Add some padding
+    minDate.setDate(minDate.getDate() - 2);
+    maxDate.setDate(maxDate.getDate() + 2);
+
+    const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
+
+    return { minDate, maxDate, totalDays: Math.max(totalDays, 7) };
+  }, [ganttData]);
 
   return (
     <div className="space-y-6">
@@ -406,6 +458,179 @@ export function TaskStats({ tasks }) {
           />
         </div>
       </div>
+
+      {/* Gantt Chart - Admin Only */}
+      {isAdmin && ganttData.length > 0 && (
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span className="text-2xl">📊</span>
+                Project Timeline (Gantt Chart)
+              </h3>
+              <p className="text-sm text-gray-400 mt-1">
+                Task schedules and deadlines overview
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-amber-500"></div>
+                <span className="text-gray-400">Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-blue-500"></div>
+                <span className="text-gray-400">In Progress</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-emerald-500"></div>
+                <span className="text-gray-400">Completed</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline Header */}
+          <div className="mb-4 flex">
+            <div className="w-48 flex-shrink-0"></div>
+            <div className="flex-1 flex justify-between px-2">
+              {[...Array(Math.min(ganttBounds.totalDays, 14))].map((_, i) => {
+                const date = new Date(ganttBounds.minDate);
+                date.setDate(
+                  date.getDate() +
+                    Math.floor(
+                      (i * ganttBounds.totalDays) /
+                        Math.min(ganttBounds.totalDays, 14),
+                    ),
+                );
+                return (
+                  <div key={i} className="text-xs text-gray-500">
+                    {date.toLocaleDateString("en", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Gantt Rows */}
+          <div className="space-y-2">
+            {ganttData.map((task, index) => {
+              const startOffset = Math.max(
+                0,
+                (task.start - ganttBounds.minDate) / (1000 * 60 * 60 * 24),
+              );
+              const duration = Math.max(1, task.duration);
+              const startPercent = (startOffset / ganttBounds.totalDays) * 100;
+              const widthPercent = Math.min(
+                (duration / ganttBounds.totalDays) * 100,
+                100 - startPercent,
+              );
+
+              const statusColors = {
+                [TaskStatus.PENDING]:
+                  "bg-gradient-to-r from-amber-500 to-amber-600",
+                [TaskStatus.IN_PROGRESS]:
+                  "bg-gradient-to-r from-blue-500 to-blue-600",
+                [TaskStatus.COMPLETED]:
+                  "bg-gradient-to-r from-emerald-500 to-emerald-600",
+              };
+
+              return (
+                <div key={task.id} className="flex items-center group">
+                  {/* Task Name */}
+                  <div className="w-48 flex-shrink-0 pr-4">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
+                          task.status === TaskStatus.COMPLETED
+                            ? "bg-emerald-500/20 text-emerald-400"
+                            : task.status === TaskStatus.IN_PROGRESS
+                              ? "bg-blue-500/20 text-blue-400"
+                              : "bg-amber-500/20 text-amber-400"
+                        }`}
+                      >
+                        {STATUS_ICONS[task.status]}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="text-sm text-white truncate"
+                          title={task.fullTitle}
+                        >
+                          {task.title}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {task.assignee}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Timeline Bar */}
+                  <div className="flex-1 h-10 bg-slate-800/50 rounded-lg relative overflow-hidden">
+                    {/* Today Marker */}
+                    {(() => {
+                      const todayOffset =
+                        (new Date() - ganttBounds.minDate) /
+                        (1000 * 60 * 60 * 24);
+                      const todayPercent =
+                        (todayOffset / ganttBounds.totalDays) * 100;
+                      if (todayPercent >= 0 && todayPercent <= 100) {
+                        return (
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-red-500/50 z-10"
+                            style={{ left: `${todayPercent}%` }}
+                          />
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Task Bar */}
+                    <div
+                      className={`absolute top-1.5 h-7 rounded-md ${statusColors[task.status]} shadow-lg transition-all duration-200 group-hover:shadow-xl group-hover:scale-y-110 cursor-pointer`}
+                      style={{
+                        left: `${startPercent}%`,
+                        width: `${Math.max(widthPercent, 2)}%`,
+                      }}
+                      title={`${task.fullTitle}\n${task.start.toLocaleDateString()} - ${task.end.toLocaleDateString()}\n${task.duration} days`}
+                    >
+                      <div className="h-full flex items-center justify-center px-2">
+                        <span className="text-xs text-white font-medium truncate">
+                          {task.duration}d
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className="w-0.5 h-4 bg-red-500/50"></div>
+              <span>Today</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Showing {ganttData.length} task{ganttData.length !== 1 ? "s" : ""}{" "}
+              • {ganttBounds.totalDays} days timeline
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Admin-only Empty Gantt State */}
+      {isAdmin && ganttData.length === 0 && (
+        <div className="glass rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+            <span className="text-2xl">📊</span>
+            Project Timeline (Gantt Chart)
+          </h3>
+          <EmptyState message="Create tasks with deadlines to see the Gantt chart" />
+        </div>
+      )}
     </div>
   );
 }

@@ -43,4 +43,28 @@ export const authController = {
       next(error);
     }
   },
+
+  // PATCH /auth/users/:id - Update user (admin only)
+  async updateUser(req, res, next) {
+    try {
+      const user = await authService.updateUser(
+        req.params.id,
+        req.validatedBody,
+        req.user.id,
+      );
+      return ApiResponse.success(res, user);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // DELETE /auth/users/:id - Delete user (admin only)
+  async deleteUser(req, res, next) {
+    try {
+      const result = await authService.deleteUser(req.params.id, req.user.id);
+      return ApiResponse.success(res, result);
+    } catch (error) {
+      next(error);
+    }
+  },
 };

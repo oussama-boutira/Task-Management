@@ -21,3 +21,13 @@ export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
+
+// Update user schema (admin only)
+export const updateUserSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(255, "Name must be at most 255 characters")
+    .optional(),
+  role: z.enum(["admin", "user"]).optional(),
+});

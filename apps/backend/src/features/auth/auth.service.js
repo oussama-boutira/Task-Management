@@ -1,12 +1,10 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { userRepository } from "./user.repository.js";
-import { config } from "../../config/index.js";
 
 // JWT secret from environment or default
-const JWT_SECRET =
-  process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
 
 // Auth service - authentication business logic
 export const authService = {
@@ -118,5 +116,63 @@ export const authService = {
   // Get all users (for admin)
   async getAllUsers() {
     return userRepository.findAll();
+  },
+
+  // Update user (admin only)
+  async updateUser(userId, updateData, currentUserId) {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      error.code = "USER_NOT_FOUND";
+      throw error;
+    }
+
+    // Prevent demoting the last admin
+    if (updateData.role === "user" && user.role === "admin") {
+      const adminCount = await userRepository.countAdmins();
+      if (adminCount <= 1) {
+        const error = new Error("Cannot demote the last admin");
+        error.statusCode = 400;
+        error.code = "LAST_ADMIN";
+        throw error;
+      }
+    }
+
+    const updatedUser = await userRepository.update(userId, updateData);
+    return updatedUser;
+  },
+
+  // Delete user (admin only)
+  async deleteUser(userId, currentUserId) {
+    // Prevent self-deletion
+    if (userId === currentUserId) {
+      const error = new Error("Cannot delete your own account");
+      error.statusCode = 400;
+      error.code = "SELF_DELETE";
+      throw error;
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      error.code = "USER_NOT_FOUND";
+      throw error;
+    }
+
+    // Prevent deleting the last admin
+    if (user.role === "admin") {
+      const adminCount = await userRepository.countAdmins();
+      if (adminCount <= 1) {
+        const error = new Error("Cannot delete the last admin");
+        error.statusCode = 400;
+        error.code = "LAST_ADMIN";
+        throw error;
+      }
+    }
+
+    await userRepository.delete(userId);
+    return { id: userId };
   },
 };

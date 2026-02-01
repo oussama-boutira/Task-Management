@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
   deadline TIMESTAMP WITH TIME ZONE,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  started_at TIMESTAMP WITH TIME ZONE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  time_spent INTEGER,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -53,6 +56,36 @@ BEGIN
 END $$;
 `;
 
+// Migration: Add time tracking columns to tasks table
+const migrateTimeTracking = `
+DO $$ 
+BEGIN 
+  -- Add started_at column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'tasks' AND column_name = 'started_at'
+  ) THEN 
+    ALTER TABLE tasks ADD COLUMN started_at TIMESTAMP WITH TIME ZONE;
+  END IF;
+  
+  -- Add completed_at column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'tasks' AND column_name = 'completed_at'
+  ) THEN 
+    ALTER TABLE tasks ADD COLUMN completed_at TIMESTAMP WITH TIME ZONE;
+  END IF;
+  
+  -- Add time_spent column (in minutes)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'tasks' AND column_name = 'time_spent'
+  ) THEN 
+    ALTER TABLE tasks ADD COLUMN time_spent INTEGER;
+  END IF;
+END $$;
+`;
+
 async function initDatabase() {
   try {
     console.log("🔄 Initializing database...");
@@ -70,6 +103,7 @@ async function initDatabase() {
     // Run migration for existing tasks table
     console.log("🔄 Running migrations...");
     await query(migrateTasksTable);
+    await query(migrateTimeTracking);
     console.log("✅ Migrations completed");
 
     process.exit(0);

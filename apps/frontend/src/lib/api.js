@@ -91,4 +91,36 @@ export const taskApi = {
     });
     return response.data;
   },
+
+  // Start task (user starts working on their assigned pending task)
+  async startTask(id) {
+    const response = await fetchApi(`/tasks/${id}/start`, {
+      method: "POST",
+    });
+    return response.data;
+  },
+
+  // Complete task (user marks their in-progress task as done, sends to review)
+  async completeTask(id) {
+    const response = await fetchApi(`/tasks/${id}/complete`, {
+      method: "POST",
+    });
+    return response.data;
+  },
+
+  // Approve task (admin approves a task pending review)
+  async approveTask(id) {
+    const response = await fetchApi(`/tasks/${id}/approve`, {
+      method: "POST",
+    });
+    return response.data;
+  },
+
+  // Reject task (admin rejects a task pending review, sends back to in_progress)
+  async rejectTask(id) {
+    const response = await fetchApi(`/tasks/${id}/reject`, {
+      method: "POST",
+    });
+    return response.data;
+  },
 };

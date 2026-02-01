@@ -4,6 +4,7 @@ import { z } from "zod";
 export const TaskStatus = {
   PENDING: "pending",
   IN_PROGRESS: "in_progress",
+  PENDING_REVIEW: "pending_review",
   COMPLETED: "completed",
 };
 
@@ -17,7 +18,9 @@ export const createTaskSchema = z.object({
     .string()
     .max(2000, "Description must be 2000 characters or less")
     .optional(),
-  status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
+  status: z
+    .enum(["pending", "in_progress", "pending_review", "completed"])
+    .default("pending"),
   deadline: z.string().datetime().optional(),
   userId: z.string().uuid("Invalid user ID format").optional().nullable(),
 });
@@ -32,7 +35,9 @@ export const updateTaskSchema = z.object({
     .string()
     .max(2000, "Description must be 2000 characters or less")
     .optional(),
-  status: z.enum(["pending", "in_progress", "completed"]).optional(),
+  status: z
+    .enum(["pending", "in_progress", "pending_review", "completed"])
+    .optional(),
   deadline: z.string().datetime().optional().nullable(),
   userId: z.string().uuid("Invalid user ID format").optional().nullable(),
 });

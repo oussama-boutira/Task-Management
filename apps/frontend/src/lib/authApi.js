@@ -73,4 +73,42 @@ export const authApi = {
 
     return data;
   },
+
+  // Update user (admin only)
+  async updateUser(token, userId, updateData) {
+    const response = await fetch(`${API_BASE_URL}/auth/users/${userId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || "Failed to update user");
+    }
+
+    return data;
+  },
+
+  // Delete user (admin only)
+  async deleteUser(token, userId) {
+    const response = await fetch(`${API_BASE_URL}/auth/users/${userId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || "Failed to delete user");
+    }
+
+    return data;
+  },
 };

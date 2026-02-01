@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTaskStore } from "../../../stores/taskStore.js";
 import { useAuthStore } from "../../../stores/authStore.js";
 import { TaskStatus } from "../../../schemas/task.schema.js";
+import { taskApi } from "../../../lib/api.js";
 
 const statusConfig = {
   [TaskStatus.PENDING]: {
@@ -14,6 +15,11 @@ const statusConfig = {
     color: "bg-blue-500/20 text-blue-300 border-blue-500/30",
     icon: "🔄",
   },
+  [TaskStatus.PENDING_REVIEW]: {
+    label: "Pending Review",
+    color: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+    icon: "👀",
+  },
   [TaskStatus.COMPLETED]: {
     label: "Completed",
     color: "bg-green-500/20 text-green-300 border-green-500/30",
@@ -21,14 +27,34 @@ const statusConfig = {
   },
 };
 
-export function TaskCard({ task, onDelete, isAdmin: isAdminProp }) {
+// Format time spent (minutes to readable format)
+function formatTimeSpent(minutes) {
+  if (!minutes) return null;
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+  if (hours > 0) {
+    return `${hours}h ${mins}m`;
+  }
+  return `${mins}m`;
+}
+
+export function TaskCard({
+  task,
+  onDelete,
+  isAdmin: isAdminProp,
+  onTaskUpdate,
+}) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const { updateTask } = useTaskStore();
+  const [actionLoading, setActionLoading] = useState(null);
+  const { updateTask, fetchTasks } = useTaskStore();
   const { user } = useAuthStore();
 
   // Use prop if provided, otherwise derive from user
   const isAdmin =
     isAdminProp !== undefined ? isAdminProp : user?.role === "admin";
+
+  // Check if current user is assigned to this task
+  const isAssignedToMe = task.userId === user?.id;
 
   const handleStatusChange = async (newStatus) => {
     if (!isAdmin) return;
@@ -42,7 +68,65 @@ export function TaskCard({ task, onDelete, isAdmin: isAdminProp }) {
     }
   };
 
+  // User actions
+  const handleStartTask = async () => {
+    setActionLoading("start");
+    try {
+      await taskApi.startTask(task.id);
+      fetchTasks(); // Refresh the task list
+    } catch (error) {
+      console.error("Failed to start task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCompleteTask = async () => {
+    setActionLoading("complete");
+    try {
+      await taskApi.completeTask(task.id);
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to complete task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Admin actions
+  const handleApproveTask = async () => {
+    setActionLoading("approve");
+    try {
+      await taskApi.approveTask(task.id);
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to approve task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectTask = async () => {
+    setActionLoading("reject");
+    try {
+      await taskApi.rejectTask(task.id);
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to reject task:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const status = statusConfig[task.status] || statusConfig.pending;
+  const timeSpent = formatTimeSpent(task.timeSpent);
+
+  // Determine which action buttons to show
+  const canStart =
+    (isAssignedToMe || isAdmin) && task.status === TaskStatus.PENDING;
+  const canComplete =
+    (isAssignedToMe || isAdmin) && task.status === TaskStatus.IN_PROGRESS;
+  const canApproveReject = isAdmin && task.status === TaskStatus.PENDING_REVIEW;
 
   return (
     <div className="glass-light rounded-xl p-5 animate-fade-in hover:bg-white/10 transition-all duration-200 group">
@@ -75,6 +159,14 @@ export function TaskCard({ task, onDelete, isAdmin: isAdminProp }) {
             >
               {status.icon} {status.label}
             </span>
+
+            {/* Time Spent Badge */}
+            {timeSpent && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                ⏱️ {timeSpent}
+              </span>
+            )}
+
             {task.deadline &&
               (() => {
                 const now = new Date();
@@ -133,6 +225,70 @@ export function TaskCard({ task, onDelete, isAdmin: isAdminProp }) {
               Created: {new Date(task.createdAt).toLocaleDateString()}
             </span>
           </div>
+
+          {/* User Action Buttons - Start/Complete */}
+          {(canStart || canComplete) && (
+            <div className="mt-4 flex items-center gap-2">
+              {canStart && (
+                <button
+                  onClick={handleStartTask}
+                  disabled={actionLoading === "start"}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-lg shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50"
+                >
+                  {actionLoading === "start" ? (
+                    <span className="animate-spin">⏳</span>
+                  ) : (
+                    <span>▶️</span>
+                  )}
+                  Start Task
+                </button>
+              )}
+              {canComplete && (
+                <button
+                  onClick={handleCompleteTask}
+                  disabled={actionLoading === "complete"}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-sm font-medium rounded-lg shadow-lg shadow-purple-500/25 transition-all disabled:opacity-50"
+                >
+                  {actionLoading === "complete" ? (
+                    <span className="animate-spin">⏳</span>
+                  ) : (
+                    <span>📝</span>
+                  )}
+                  Submit for Review
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Admin Review Buttons - Approve/Reject */}
+          {canApproveReject && (
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={handleApproveTask}
+                disabled={actionLoading === "approve"}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-medium rounded-lg shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50"
+              >
+                {actionLoading === "approve" ? (
+                  <span className="animate-spin">⏳</span>
+                ) : (
+                  <span>✅</span>
+                )}
+                Approve
+              </button>
+              <button
+                onClick={handleRejectTask}
+                disabled={actionLoading === "reject"}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm font-medium rounded-lg shadow-lg shadow-red-500/25 transition-all disabled:opacity-50"
+              >
+                {actionLoading === "reject" ? (
+                  <span className="animate-spin">⏳</span>
+                ) : (
+                  <span>🔄</span>
+                )}
+                Reject
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Admin-only actions */}
@@ -147,6 +303,7 @@ export function TaskCard({ task, onDelete, isAdmin: isAdminProp }) {
             >
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
+              <option value="pending_review">Pending Review</option>
               <option value="completed">Completed</option>
             </select>
 

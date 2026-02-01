@@ -48,4 +48,34 @@ router.delete(
   taskController.deleteTask,
 );
 
+// POST /tasks/:id/start - Start task (user can start their assigned tasks)
+router.post(
+  "/:id/start",
+  validateRequest(taskIdSchema, "params"),
+  taskController.startTask,
+);
+
+// POST /tasks/:id/complete - Complete task (user marks as done, sends to review)
+router.post(
+  "/:id/complete",
+  validateRequest(taskIdSchema, "params"),
+  taskController.completeTask,
+);
+
+// POST /tasks/:id/approve - Approve task (admin only)
+router.post(
+  "/:id/approve",
+  requireAdmin,
+  validateRequest(taskIdSchema, "params"),
+  taskController.approveTask,
+);
+
+// POST /tasks/:id/reject - Reject task (admin only)
+router.post(
+  "/:id/reject",
+  requireAdmin,
+  validateRequest(taskIdSchema, "params"),
+  taskController.rejectTask,
+);
+
 export const taskRoutes = router;
