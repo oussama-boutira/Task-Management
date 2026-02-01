@@ -25,7 +25,7 @@ const columns = [
   },
 ];
 
-function KanbanCard({ task, onDelete, onStatusChange }) {
+function KanbanCard({ task, onDelete, isAdmin }) {
   const handleDragStart = (e) => {
     e.dataTransfer.setData("taskId", task.id);
     e.dataTransfer.setData("currentStatus", task.status);
@@ -33,38 +33,53 @@ function KanbanCard({ task, onDelete, onStatusChange }) {
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
-      className="group bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 cursor-grab active:cursor-grabbing hover:border-slate-600 hover:bg-slate-800/80 transition-all duration-200 hover:shadow-lg hover:shadow-black/20"
+      draggable={isAdmin}
+      onDragStart={isAdmin ? handleDragStart : undefined}
+      className={`group bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 ${
+        isAdmin ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+      } hover:border-slate-600 hover:bg-slate-800/80 transition-all duration-200 hover:shadow-lg hover:shadow-black/20`}
     >
       <div className="flex items-start justify-between gap-2">
         <h4 className="font-medium text-white text-sm leading-tight flex-1">
           {task.title}
         </h4>
-        <button
-          onClick={() => onDelete(task)}
-          className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {isAdmin && (
+          <button
+            onClick={() => onDelete(task)}
+            className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
       {task.description && (
         <p className="mt-2 text-xs text-gray-400 line-clamp-2">
           {task.description}
         </p>
       )}
+
+      {/* Assigned User */}
+      {task.assignedUserName && (
+        <div className="mt-2 flex items-center gap-2">
+          <div className="w-5 h-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-[10px] font-medium">
+            {task.assignedUserName.charAt(0).toUpperCase()}
+          </div>
+          <span className="text-xs text-gray-400">{task.assignedUserName}</span>
+        </div>
+      )}
+
       <div className="mt-3 flex flex-col gap-2">
         {task.deadline &&
           (() => {
@@ -128,8 +143,9 @@ function KanbanCard({ task, onDelete, onStatusChange }) {
   );
 }
 
-function KanbanColumn({ column, tasks, onDelete, onDrop }) {
+function KanbanColumn({ column, tasks, onDelete, onDrop, isAdmin }) {
   const handleDragOver = (e) => {
+    if (!isAdmin) return;
     e.preventDefault();
     e.currentTarget.classList.add("ring-2", "ring-primary-500/50");
   };
@@ -139,6 +155,7 @@ function KanbanColumn({ column, tasks, onDelete, onDrop }) {
   };
 
   const handleDrop = (e) => {
+    if (!isAdmin) return;
     e.preventDefault();
     e.currentTarget.classList.remove("ring-2", "ring-primary-500/50");
     const taskId = e.dataTransfer.getData("taskId");
@@ -171,11 +188,18 @@ function KanbanColumn({ column, tasks, onDelete, onDrop }) {
       <div className="flex-1 p-3 space-y-3 overflow-y-auto">
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center h-32 border-2 border-dashed border-slate-700/50 rounded-xl">
-            <p className="text-sm text-gray-500">Drop tasks here</p>
+            <p className="text-sm text-gray-500">
+              {isAdmin ? "Drop tasks here" : "No tasks"}
+            </p>
           </div>
         ) : (
           tasks.map((task) => (
-            <KanbanCard key={task.id} task={task} onDelete={onDelete} />
+            <KanbanCard
+              key={task.id}
+              task={task}
+              onDelete={onDelete}
+              isAdmin={isAdmin}
+            />
           ))
         )}
       </div>
@@ -183,10 +207,11 @@ function KanbanColumn({ column, tasks, onDelete, onDrop }) {
   );
 }
 
-export function KanbanBoard({ tasks, onDeleteTask }) {
+export function KanbanBoard({ tasks, onDeleteTask, isAdmin = false }) {
   const { updateTask } = useTaskStore();
 
   const handleDrop = async (taskId, newStatus) => {
+    if (!isAdmin) return;
     try {
       await updateTask(taskId, { status: newStatus });
     } catch (error) {
@@ -207,6 +232,7 @@ export function KanbanBoard({ tasks, onDeleteTask }) {
           tasks={getTasksByStatus(column.id)}
           onDelete={onDeleteTask}
           onDrop={handleDrop}
+          isAdmin={isAdmin}
         />
       ))}
     </div>

@@ -25,3 +25,7 @@ export const validateRequest = (schema, source = "body") => {
     next();
   };
 };
+
+// Convenience helpers
+export const validateBody = (schema) => validateRequest(schema, "body");
+export const validateParams = (schema) => validateRequest(schema, "params");

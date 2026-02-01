@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { config } from "./config/index.js";
 import { taskRoutes } from "./features/tasks/index.js";
+import { authRoutes } from "./features/auth/index.js";
 import { errorHandler } from "./middleware/index.js";
 import { API_BASE_PATH } from "./schemas/task.schema.js";
 
@@ -18,6 +19,7 @@ app.get("/health", (req, res) => {
 });
 
 // API Routes
+app.use(`${API_BASE_PATH}/auth`, authRoutes);
 app.use(`${API_BASE_PATH}/tasks`, taskRoutes);
 
 // 404 handler

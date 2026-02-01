@@ -19,6 +19,7 @@ export const createTaskSchema = z.object({
     .optional(),
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
   deadline: z.string().datetime().optional(),
+  userId: z.string().uuid("Invalid user ID format").optional().nullable(),
 });
 
 export const updateTaskSchema = z.object({
@@ -33,6 +34,7 @@ export const updateTaskSchema = z.object({
     .optional(),
   status: z.enum(["pending", "in_progress", "completed"]).optional(),
   deadline: z.string().datetime().optional().nullable(),
+  userId: z.string().uuid("Invalid user ID format").optional().nullable(),
 });
 
 // Constants

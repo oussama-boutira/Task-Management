@@ -1,15 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTaskStore } from "../../../stores/taskStore.js";
 import { createTaskSchema } from "../../../schemas/task.schema.js";
+import { authApi } from "../../../lib/authApi.js";
+import { useAuthStore } from "../../../stores/authStore.js";
 
 export function AddTaskModal({ isOpen, onClose }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [userId, setUserId] = useState("");
+  const [users, setUsers] = useState([]);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   const { createTask } = useTaskStore();
+  const { token } = useAuthStore();
+
+  // Fetch users when modal opens
+  useEffect(() => {
+    if (isOpen && token) {
+      setIsLoadingUsers(true);
+      authApi
+        .getAllUsers(token)
+        .then((response) => {
+          setUsers(response.data || []);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch users:", error);
+        })
+        .finally(() => {
+          setIsLoadingUsers(false);
+        });
+    }
+  }, [isOpen, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,6 +44,7 @@ export function AddTaskModal({ isOpen, onClose }) {
       title,
       description: description || undefined,
       deadline: deadline ? new Date(deadline).toISOString() : undefined,
+      userId: userId || undefined,
     });
     if (!result.success) {
       const fieldErrors = {};
@@ -36,6 +61,7 @@ export function AddTaskModal({ isOpen, onClose }) {
       setTitle("");
       setDescription("");
       setDeadline("");
+      setUserId("");
       onClose();
     } catch (error) {
       setErrors({ form: error.message });
@@ -48,6 +74,7 @@ export function AddTaskModal({ isOpen, onClose }) {
     setTitle("");
     setDescription("");
     setDeadline("");
+    setUserId("");
     setErrors({});
     onClose();
   };
@@ -167,6 +194,33 @@ export function AddTaskModal({ isOpen, onClose }) {
               <div className="mt-2 flex justify-end text-xs text-gray-500">
                 <span>{description.length}/2000</span>
               </div>
+            </div>
+
+            {/* Assign To User */}
+            <div>
+              <label
+                htmlFor="userId"
+                className="block text-sm font-medium text-gray-300 mb-2"
+              >
+                Assign To <span className="text-gray-500">(optional)</span>
+              </label>
+              <select
+                id="userId"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                disabled={isLoadingUsers}
+                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all appearance-none cursor-pointer"
+              >
+                <option value="">Unassigned</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.email}) {user.role === "admin" && "👑"}
+                  </option>
+                ))}
+              </select>
+              {isLoadingUsers && (
+                <p className="mt-2 text-xs text-gray-500">Loading users...</p>
+              )}
             </div>
 
             <div>

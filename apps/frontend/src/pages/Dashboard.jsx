@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTaskStore } from "../stores/taskStore.js";
 import { useThemeStore } from "../stores/themeStore.js";
+import { useAuthStore } from "../stores/authStore.js";
 import {
   TaskList,
   DeleteTaskDialog,
@@ -17,14 +19,17 @@ const VIEWS = {
 };
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { tasks, isLoading, error, fetchTasks, deleteTask, clearError } =
     useTaskStore();
+  const { user, logout } = useAuthStore();
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeView, setActiveView] = useState(VIEWS.KANBAN);
   const [showForm, setShowForm] = useState(false);
 
   const { initTheme } = useThemeStore();
+  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     initTheme();
@@ -44,6 +49,11 @@ export function Dashboard() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
   return (
@@ -78,12 +88,53 @@ export function Dashboard() {
 
             {/* Actions */}
             <div className="flex items-center gap-3">
+              {/* User Info */}
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </div>
+                <div className="text-sm">
+                  <p className="text-white font-medium">{user?.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {isAdmin ? (
+                      <span className="text-amber-400">Admin</span>
+                    ) : (
+                      "User"
+                    )}
+                  </p>
+                </div>
+              </div>
+
               <ThemeToggle />
 
-              {/* Add Task Button */}
+              {/* Add Task Button (Admin only) */}
+              {isAdmin && (
+                <button
+                  onClick={() => setShowForm(!showForm)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-medium rounded-xl transition-all duration-200 shadow-lg shadow-primary-500/25"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">Add Task</span>
+                </button>
+              )}
+
+              {/* Logout Button */}
               <button
-                onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-medium rounded-xl transition-all duration-200 shadow-lg shadow-primary-500/25"
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-3 py-2.5 bg-slate-700/50 hover:bg-slate-600/50 text-gray-300 hover:text-white font-medium rounded-xl transition-all duration-200"
+                title="Logout"
               >
                 <svg
                   className="w-5 h-5"
@@ -95,10 +146,10 @@ export function Dashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 4v16m8-8H4"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                <span className="hidden sm:inline">Add Task</span>
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>
@@ -148,6 +199,7 @@ export function Dashboard() {
               <KanbanBoard
                 tasks={tasks}
                 onDeleteTask={(task) => setTaskToDelete(task)}
+                isAdmin={isAdmin}
               />
             )}
 
@@ -157,6 +209,7 @@ export function Dashboard() {
                 isLoading={isLoading}
                 error={error}
                 onDeleteTask={(task) => setTaskToDelete(task)}
+                isAdmin={isAdmin}
               />
             )}
 
@@ -165,16 +218,20 @@ export function Dashboard() {
         )}
       </main>
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteTaskDialog
-        task={taskToDelete}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setTaskToDelete(null)}
-        isDeleting={isDeleting}
-      />
+      {/* Delete Confirmation Dialog (Admin only) */}
+      {isAdmin && (
+        <DeleteTaskDialog
+          task={taskToDelete}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setTaskToDelete(null)}
+          isDeleting={isDeleting}
+        />
+      )}
 
-      {/* Add Task Modal */}
-      <AddTaskModal isOpen={showForm} onClose={() => setShowForm(false)} />
+      {/* Add Task Modal (Admin only) */}
+      {isAdmin && (
+        <AddTaskModal isOpen={showForm} onClose={() => setShowForm(false)} />
+      )}
     </div>
   );
 }

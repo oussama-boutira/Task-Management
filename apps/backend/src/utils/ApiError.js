@@ -14,6 +14,14 @@ export class ApiError extends Error {
     return new ApiError(400, ErrorCodes.VALIDATION_ERROR, message, details);
   }
 
+  static unauthorized(message) {
+    return new ApiError(401, "UNAUTHORIZED", message);
+  }
+
+  static forbidden(message) {
+    return new ApiError(403, "FORBIDDEN", message);
+  }
+
   static notFound(message) {
     return new ApiError(404, ErrorCodes.TASK_NOT_FOUND, message);
   }

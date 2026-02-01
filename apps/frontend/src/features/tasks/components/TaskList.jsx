@@ -37,7 +37,13 @@ const SORT_OPTIONS = [
   { value: "title", label: "Title" },
 ];
 
-export function TaskList({ tasks, isLoading, error, onDeleteTask }) {
+export function TaskList({
+  tasks,
+  isLoading,
+  error,
+  onDeleteTask,
+  isAdmin = false,
+}) {
   const notifiedTasksRef = useRef(new Set());
 
   // Filter & Sort state
@@ -422,6 +428,7 @@ export function TaskList({ tasks, isLoading, error, onDeleteTask }) {
               collapsed={collapsedSections[status]}
               onToggle={() => toggleSection(status)}
               onDeleteTask={onDeleteTask}
+              isAdmin={isAdmin}
             />
           ))}
         </div>
@@ -429,7 +436,12 @@ export function TaskList({ tasks, isLoading, error, onDeleteTask }) {
         // Show flat list when filtering by specific status
         <div className="space-y-3">
           {processedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDelete={onDeleteTask} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onDelete={onDeleteTask}
+              isAdmin={isAdmin}
+            />
           ))}
         </div>
       )}
@@ -465,7 +477,14 @@ function StatusPill({ active, onClick, color, children }) {
 }
 
 // Collapsible Status Section Component
-function StatusSection({ status, tasks, collapsed, onToggle, onDeleteTask }) {
+function StatusSection({
+  status,
+  tasks,
+  collapsed,
+  onToggle,
+  onDeleteTask,
+  isAdmin,
+}) {
   const config = sectionConfig[status];
   const isEmpty = tasks.length === 0;
 
@@ -515,7 +534,12 @@ function StatusSection({ status, tasks, collapsed, onToggle, onDeleteTask }) {
             </p>
           ) : (
             tasks.map((task) => (
-              <TaskCard key={task.id} task={task} onDelete={onDeleteTask} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onDelete={onDeleteTask}
+                isAdmin={isAdmin}
+              />
             ))
           )}
         </div>

@@ -6,7 +6,7 @@ export const taskController = {
   // GET /tasks - List all tasks
   async getAllTasks(req, res, next) {
     try {
-      const { tasks, total } = await taskService.getAllTasks();
+      const { tasks, total } = await taskService.getAllTasks(req.user);
       return ApiResponse.success(res, tasks, { total });
     } catch (error) {
       next(error);
@@ -17,7 +17,7 @@ export const taskController = {
   async getTaskById(req, res, next) {
     try {
       const { id } = req.validatedParams;
-      const task = await taskService.getTaskById(id);
+      const task = await taskService.getTaskById(id, req.user);
       return ApiResponse.success(res, task);
     } catch (error) {
       next(error);
